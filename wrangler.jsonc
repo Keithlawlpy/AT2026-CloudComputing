@@ -1,1 +1,8 @@
-{ "$schema": "node_modules/wrangler/config-schema.json", "name": "discord-event-manager", "main": "src/index.js", "compatibility_date": "2026-10-29" }
+{"$schema": "node_modules/wrangler/config-schema.json",
+  "name": "discord-event-manager",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-29",
+  "vars": {
+    "AIRTABLE_BASE_ID": "appv2AkGS7GwuLJpQ"
+  }
+}
