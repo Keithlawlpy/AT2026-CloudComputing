@@ -1,59 +1,150 @@
 
+
+// Convert hexadecimal text into bytes.
+// Discord sends its signature and public key in hexadecimal.
+function hexToBytes(hex) {
+    const bytes = new Uint8Array(hex.length / 2);
+
+    for (let i = 0; i < bytes.length; i++) {
+        bytes[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
+    }
+
+    return bytes;
+}
+
+// Check whether the request really came from Discord.
+async function verifyDiscordRequest(request, body, publicKey) {
+    const signature = request.headers.get("X-Signature-Ed25519");
+    const timestamp = request.headers.get("X-Signature-Timestamp");
+
+    if (!signature || !timestamp) {
+        return false;
+    }
+
+    try {
+        const key = await crypto.subtle.importKey(
+            "raw",
+            hexToBytes(publicKey),
+            { name: "Ed25519" },
+            false,
+            ["verify"]
+        );
+
+        const message = timestamp + body;
+        const messageBytes = new TextEncoder().encode(message);
+        const signatureBytes = hexToBytes(signature);
+
+        return await crypto.subtle.verify(
+            { name: "Ed25519" },
+            key,
+            signatureBytes,
+            messageBytes
+        );
+    } catch (error) {
+        console.error("Discord verification error:", error.message);
+        return false;
+    }
+}
+
 export default {
     async fetch(request, env) {
-        if (request.method !== "GET") {
-            return Response.json(
-                { error: "Method not allowed" },
-                { status: 405 }
-            );
-        }
 
-        // Check that Cloudflare has both Airtable settings.
-        if (!env.AIRTABLE_TOKEN || !env.AIRTABLE_BASE_ID) {
-            return Response.json(
-                { error: "Airtable configuration is missing" },
-                { status: 500 }
-            );
-        }
+        // PART 1: Keep the existing Airtable connection test.
+        if (request.method === "GET") {
 
-        try {
-            // Request up to five records from the Events table.
-            const airtableUrl = new URL(
-                `https://api.airtable.com/v0/${env.AIRTABLE_BASE_ID}/Events`
-            );
-
-            airtableUrl.searchParams.set("maxRecords", "5");
-
-            const response = await fetch(airtableUrl, {
-                headers: {
-                    Authorization: `Bearer ${env.AIRTABLE_TOKEN}`,
-                },
-            });
-
-            if (!response.ok) {
-                // Do not expose Airtable's detailed error or credentials.
-                console.error("Airtable request failed:", response.status);
-
+            if (!env.AIRTABLE_TOKEN || !env.AIRTABLE_BASE_ID) {
                 return Response.json(
-                    { error: "Could not read the Airtable Events table" },
-                    { status: 502 }
+                    { error: "Airtable configuration is missing" },
+                    { status: 500 }
                 );
             }
 
-            const data = await response.json();
+            try {
+                const airtableUrl = new URL(
+                    `https://api.airtable.com/v0/${env.AIRTABLE_BASE_ID}/Events`
+                );
 
-            // Return only the number of records, not the event data.
-            return Response.json({
-                message: "Airtable connection successful!",
-                recordsFound: data.records.length,
-            });
-        } catch (error) {
-            console.error("Airtable connection error:", error.message);
+                airtableUrl.searchParams.set("maxRecords", "5");
 
-            return Response.json(
-                { error: "An unexpected error occurred" },
-                { status: 500 }
-            );
+                const response = await fetch(airtableUrl, {
+                    headers: {
+                        Authorization: `Bearer ${env.AIRTABLE_TOKEN}`,
+                    },
+                });
+
+                if (!response.ok) {
+                    console.error("Airtable request failed:", response.status);
+
+                    return Response.json(
+                        { error: "Could not read the Airtable Events table" },
+                        { status: 502 }
+                    );
+                }
+
+                const data = await response.json();
+
+                return Response.json({
+                    message: "Airtable connection successful!",
+                    recordsFound: data.records.length,
+                });
+
+            } catch (error) {
+                console.error("Airtable connection error:", error.message);
+
+                return Response.json(
+                    { error: "An unexpected error occurred" },
+                    { status: 500 }
+                );
+            }
         }
+
+        // PART 2: Receive Discord interactions.
+        if (request.method === "POST") {
+
+            if (!env.DISCORD_PUBLIC_KEY) {
+                return Response.json(
+                    { error: "Discord public key is missing" },
+                    { status: 500 }
+                );
+            }
+
+            // Read the original request body.
+            const body = await request.text();
+
+            // Verify that Discord sent this request.
+            const isValid = await verifyDiscordRequest(
+                request,
+                body,
+                env.DISCORD_PUBLIC_KEY
+            );
+
+            if (!isValid) {
+                return Response.json(
+                    { error: "Invalid Discord request" },
+                    { status: 401 }
+                );
+            }
+
+            // Turn the request body into JavaScript data.
+            const interaction = JSON.parse(body);
+
+            // Discord PING: respond with PONG.
+            if (interaction.type === 1) {
+                return Response.json({
+                    type: 1
+                });
+            }
+
+            // We will handle slash commands in the next step.
+            return Response.json({
+                error: "Interaction not supported yet"
+            }, { status: 400 });
+        }
+
+        // PART 3: Reject other request methods.
+        return Response.json(
+            { error: "Method not allowed" },
+            { status: 405 }
+        );
     },
 };
