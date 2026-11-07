@@ -1,50 +1,4 @@
-
-
-// Convert hexadecimal text into bytes.
-// Discord sends its signature and public key in hexadecimal.
-function hexToBytes(hex) {
-    const bytes = new Uint8Array(hex.length / 2);
-
-    for (let i = 0; i < bytes.length; i++) {
-        bytes[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
-    }
-
-    return bytes;
-}
-
-// Check whether the request really came from Discord.
-async function verifyDiscordRequest(request, body, publicKey) {
-    const signature = request.headers.get("X-Signature-Ed25519");
-    const timestamp = request.headers.get("X-Signature-Timestamp");
-
-    if (!signature || !timestamp) {
-        return false;
-    }
-
-    try {
-        const key = await crypto.subtle.importKey(
-            "raw",
-            hexToBytes(publicKey),
-            { name: "Ed25519" },
-            false,
-            ["verify"]
-        );
-
-        const message = timestamp + body;
-        const messageBytes = new TextEncoder().encode(message);
-        const signatureBytes = hexToBytes(signature);
-
-        return await crypto.subtle.verify(
-            { name: "Ed25519" },
-            key,
-            signatureBytes,
-            messageBytes
-        );
-    } catch (error) {
-        console.error("Discord verification error:", error.message);
-        return false;
-    }
-}
+import { verifyKey } from "discord-interactions";
 
 export default {
     async fetch(request, env) {
@@ -110,13 +64,23 @@ export default {
 
             // Read the original request body.
             const body = await request.text();
+            const signature = request.headers.get("X-Signature-Ed25519");
+            const timestamp = request.headers.get("X-Signature-Timestamp");
 
             // Verify that Discord sent this request.
-            const isValid = await verifyDiscordRequest(
-                request,
-                body,
-                env.DISCORD_PUBLIC_KEY
-            );
+            let isValid = false;
+            if (signature && timestamp) {
+                try {
+                    isValid = await verifyKey(
+                        body,
+                        signature,
+                        timestamp,
+                        env.DISCORD_PUBLIC_KEY
+                    );
+                } catch {
+                    isValid = false;
+                }
+            }
 
             if (!isValid) {
                 return Response.json(
