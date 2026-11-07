@@ -5,6 +5,8 @@
   "compatibility_date": "2026-10-29",
   "vars": {
     "AIRTABLE_BASE_ID": "appv2AkGS7GwuLJpQ",
-    "DISCORD_PUBLIC_KEY": "YOUR_DISCORD_PUBLIC_KEY"
+    "DISCORD_PUBLIC_KEY": "YOUR_DISCORD_PUBLIC_KEY"}
+  "observability": {
+      "enabled": false}
   }
 }
