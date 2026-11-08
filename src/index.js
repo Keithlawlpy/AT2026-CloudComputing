@@ -62,7 +62,7 @@ export default {
                 );
             }
 
-            // Read the original request body.
+            // wait for text 
             const body = await request.text();
             const signature = request.headers.get("X-Signature-Ed25519");
             const timestamp = request.headers.get("X-Signature-Timestamp");
@@ -89,23 +89,34 @@ export default {
                 );
             }
 
-            // Turn the request body into JavaScript data.
+            // Turns request text to JavaScript data.
             const interaction = JSON.parse(body);
 
-            // Discord PING: respond with PONG.
+            // PONG respones from discord 
             if (interaction.type === 1) {
                 return Response.json({
                     type: 1
                 });
             }
 
-            // We will handle slash commands in the next step.
+            if (interaction.type === 2) {
+                const commandName = interaction.data.name;
+
+                if (commandName === "hello") {
+                    return Response.json({
+                        type: 4,
+                        data: {
+                            content: "Hello from Cloudflare!"
+                        }
+                    });
+                }
+            }
+
             return Response.json({
                 error: "Interaction not supported yet"
             }, { status: 400 });
         }
 
-        // PART 3: Reject other request methods.
         return Response.json(
             { error: "Method not allowed" },
             { status: 405 }
