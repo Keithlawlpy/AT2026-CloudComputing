@@ -101,6 +101,7 @@ export default {
 
             if (interaction.type === 2) {
                 const commandName = interaction.data.name;
+                console.log("Received command:", commandName);   
 
                 if (commandName === "hello") {
                     return Response.json({

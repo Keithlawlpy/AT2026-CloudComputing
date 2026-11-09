@@ -7,7 +7,7 @@
     "AIRTABLE_BASE_ID": "appv2AkGS7GwuLJpQ"
   },
   "observability": {
-    "enabled": false,
+    "enabled": true,
     "invocation_logs": true,
     "persist": true
   }
