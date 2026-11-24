@@ -135,10 +135,48 @@ export default {
                     const guildId = interaction.guild_id;
                     const userId = interaction.member.user.id;
 
-                    return Response.json({
-                        type: 4,
-                        data: { content: `Title: ${title}, Server: ${guildId}, User: ${userId}` }
-                    });
+                    // Create a new event in Airtable
+                    try {
+                        const response = await fetch(
+                            `https://api.airtable.com/v0/${env.AIRTABLE_BASE_ID}/Events`,
+                            {
+                                method: "POST",
+                                headers: {
+                                    Authorization: `Bearer ${env.AIRTABLE_TOKEN}`,
+                                    "Content-Type": "application/json"
+                                },
+                                body: JSON.stringify({
+                                    fields: {
+                                        EventName: title,
+                                        DiscordServerId: guildId,
+                                        CreatedBy: userId
+                                    }
+                                })
+                            }
+                        );
+
+                        if (!response.ok) {
+                            console.error("Airtable create failed:", response.status);
+                            return Response.json({
+                                type: 4,
+                                data: { content: "Sorry, the event could not be saved." }
+                            });
+                        }
+
+                        const record = await response.json();
+
+                        return Response.json({
+                            type: 4,
+                            data: { content: `Event #${record.fields.EventNumber} created: ${title}` }
+                        });
+
+                    } catch (error) {
+                        console.error("Create event error:", error.message);
+                        return Response.json({
+                            type: 4,
+                            data: { content: "Something went wrong. Please try again." }
+                        });
+                    }
                 }
             }
 
