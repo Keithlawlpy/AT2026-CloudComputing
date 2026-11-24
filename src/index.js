@@ -121,6 +121,25 @@ export default {
                         }
                     });
                 }
+                if (commandName === "create") {
+
+                    // DMs have no server, so guild_id is missing there
+                    if (!interaction.guild_id) {
+                        return Response.json({
+                            type: 4,
+                            data: { content: "Use this command inside a server." }
+                        });
+                    }
+
+                    const title = ____;
+                    const guildId = ____;
+                    const userId = ____;
+
+                    return Response.json({
+                        type: 4,
+                        data: { content: `Title: ${title}, Server: ${guildId}, User: ${userId}` }
+                    });
+                }
             }
 
             return Response.json({
