@@ -111,6 +111,19 @@ export default {
                         }
                     });
                 }
+                if (commandName === "help") {
+                    return Response.json({
+                        type: 4,
+                        data: {
+                            content:
+                                "**Guild Event Manager**\n" +
+                                "/hello - check the bot is working\n" +
+                                "/create title - create a new event\n" +
+                                "/help - show this list",
+                            flags: 64
+                        }
+                    });
+                }
             }
 
             return Response.json({
