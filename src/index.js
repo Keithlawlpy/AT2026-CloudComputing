@@ -3,7 +3,7 @@ import { verifyKey } from "discord-interactions";
 export default {
     async fetch(request, env) {
 
-        // PART 1: Keep the existing Airtable connection test.
+        // PART 1: Airtable connection test.
         if (request.method === "GET") {
 
             if (!env.AIRTABLE_TOKEN || !env.AIRTABLE_BASE_ID) {
@@ -77,7 +77,8 @@ export default {
                         timestamp,
                         env.DISCORD_PUBLIC_KEY
                     );
-                } catch {
+                }
+                catch {
                     isValid = false;
                 }
             }
@@ -105,17 +106,13 @@ export default {
 
                 if (commandName === "hello") {
                     return Response.json({
-                        type: 4,
-                        data: {
-                            content: "Hello from Cloudflare!"
-                        }
+                        type: 4, data: { content: "Hello from Cloudflare!" }
                     });
                 }
+                // check for usable commands
                 if (commandName === "help") {
                     return Response.json({
-                        type: 4,
-                        data: {
-                            content:
+                        type: 4, data: {content:
                                 "**Guild Event Manager**\n" +
                                 "/hello - check the bot is working\n" +
                                 "/create title - create a new event\n" +
