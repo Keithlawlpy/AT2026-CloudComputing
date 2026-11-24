@@ -131,9 +131,9 @@ export default {
                         });
                     }
 
-                    const title = ____;
-                    const guildId = ____;
-                    const userId = ____;
+                    const title = interaction.data.options[0].value;
+                    const guildId = interaction.guild_id;
+                    const userId = interaction.member.user.id;
 
                     return Response.json({
                         type: 4,
